@@ -1,0 +1,27 @@
+﻿Sample.code,Tube,Species,Num.indiv,Type,Conservation.status(2017),Lake.location,Lat,Long,Seawater.influence,Salinity,Chla.ugL,Other.samples,Library.reads,"Water,type",Life.History,Other.fish,Other.fish.richness,Seawater.influence.2,Salinity.ppt
+HAW-S,R1,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Hawaiki Creek,-44.02535726,-176.3636689,seawater,,,,56703570,Coastal,Diadromous,>4,>4,seawater,
+HUR-S,R2,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Huro,-43.942693,-176.512858,fresh,,,,70395966,Lake,Landlocked,"LF, SF, INA, RF",3 to 4,fresh,0.4
+KAI-S,R3,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Kairae,-43.85319418,-176.3993858,fresh,0.6,26.22,,63448931,Lake,Landlocked,None,0,fresh,0.6
+KOO-S,R4,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Koomutu,-43.75014171,-176.4245311,fresh,0.7,,,65314420,Lake,Landlocked,SF,1 to 2,fresh,0.7
+RAN-S,R5,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Rangitahi,-43.7667,-176.35,fresh,0.7,0.361,,59137791,Lake,Landlocked,"LF, SF",1 to 2,fresh,0.7
+RTP-S,R6,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Rotoparaoa,-43.81466816,-176.5919598,fresh,0.3,,,71262513,Lake,Landlocked,"LF, SF",1 to 2,fresh,0.3
+MAK-S,R7,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Makuku,-43.84203157,-176.3907514,fresh,0.6,0.669,,67347782,Lake,Landlocked,None,0,fresh,0.6
+NAI-S,R8,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Nairn/Mangatukarewa River,-43.97471507,-176.5610916,seawater,,,,53273354,Coastal,Diadromous,>4,>4,seawater,
+TAI-S,R9,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Te Awainanga River,-43.9812297,-176.474058,brackish,,,,55882177,TeWhanga,Diadromous,>4,>4,seawater,
+WKB-S,R10,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Waikato Bay,-43.83429159,-176.4990546,brackish,,,,64493186,TeWhanga,Diadromous,>4,>4,seawater,
+PAT-SF,R11,Anguilla australis,5,Shortfin eel pooled gill tissue RNA,Not threatened,Lake Pateriki,-43.75366103,-176.3084752,brackish,~10,,SF; Amphi; Iso,64397078,Lake,Landlocked,,1 to 2,brackish,~10
+PAT-S,R12,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Pateriki,-43.75366103,-176.3084752,brackish,~10,,SF; Amphi; Iso,86553462,Lake,Landlocked,SF,1 to 2,brackish,~10
+ROT-MF,R13,Neochanna rekohua,5,Mudfish pooled gill tissue RNA,Naturally uncommon,Lake Rotorua,-43.76079897,-176.2938646,fresh,~0.5,,MF; Beetle; Larvae; Sigara,79717946,Lake,Landlocked,,1 to 2,fresh,~0.5
+ROT-S,R14,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Rotorua,-43.76079897,-176.2938646,fresh,~0.5,,MF; Beetle; Larvae; Sigara,65454829,Lake,Landlocked,MF,1 to 2,fresh,~0.5
+TEN-S,R15,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Tennants Lake,-43.82716474,-176.5736338,fresh,~0.5,,Snail; Amphi; Cadd; Sigara,64153984,Lake,Landlocked,None,0,fresh,~0.5
+MAR-GK,R16,Galaxias argenteus,5,Giant kōkopu pooled gill tissue RNA,Declining,Lake Marakapia,-43.84190306,-176.5543161,fresh,~0.5,,GK; Snail; Cadd,46564521,Lake,Landlocked,,1 to 2,fresh,~0.5
+MAR-S,R17,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Marakapia,-43.84190306,-176.5543161,fresh,~0.5,,GK; Snail; Cadd,57356688,Lake,Landlocked,GK,1 to 2,fresh,~0.5
+TW-INA,R18,Galaxias maculatus,3,Inanga pooled gill tissue RNA,Declining,Lake Te Wapu,-43.74257142,-176.2617997,slightly brackish,~2,,LF; SF; INA; Shrimp; Amphi; Iso; Snail,78788395,Lake,Landlocked,,3 to 4,brackish,~2
+TW-LF,R19,Anguilla dieffenbachii,2,Longfin eel pooled gill tissue RNA,Declining,Lake Te Wapu,-43.74257142,-176.2617997,slightly brackish,~2,,LF; SF; INA; Shrimp; Amphi; Iso; Snail,57643432,Lake,Landlocked,,3 to 4,brackish,~2
+TW-SF,R20,Anguilla australis,4,Shortfin eel pooled gill tissue RNA,Not threatened,Lake Te Wapu,-43.74257142,-176.2617997,slightly brackish,~2,,LF; SF; INA; Shrimp; Amphi; Iso; Snail,61067505,Lake,Landlocked,,3 to 4,brackish,~2
+TW-S,R21,Retropinna retropinna,5,Smelt pooled gill tissue RNA,Not threatened,Lake Te Wapu,-43.74257142,-176.2617997,slightly brackish,~2,,LF; SF; INA; Shrimp; Amphi; Iso; Snail,69110747,Lake,Landlocked,"LF, SF, INA",3 to 4,brackish,~2
+WAI-INA,R22,Galaxias maculatus,5,Inanga pooled gill tissue RNA,Declining,Lake Waikauia,-43.71709556,-176.6221426,"tidal, brackish",~6,,LF; SF; INA; TF; Shrimp; Amphi; Iso,60136050,Lake,Diadromous,,3 to 4,brackish,~6
+WAI-LF,R23,Anguilla dieffenbachii,3,Longfin eel pooled gill tissue RNA,Declining,Lake Waikauia,-43.71709556,-176.6221426,"tidal, brackish",~6,,LF; SF; INA; TF; Shrimp; Amphi; Iso,51522182,Lake,Diadromous,,3 to 4,brackish,~6
+WAI-SF,R24,Anguilla australis,3,Shortfin eel pooled gill tissue RNA,Not threatened,Lake Waikauia,-43.71709556,-176.6221426,"tidal, brackish",~6,,LF; SF; INA; TF; Shrimp; Amphi; Iso,75944534,Lake,Diadromous,,3 to 4,brackish,~6
+WAI-S,R25,Retropinna retropinna,7,Smelt pooled gill tissue RNA,Not threatened,Lake Waikauia,-43.71709556,-176.6221426,"tidal, brackish",~6,,LF; SF; INA; TF; Shrimp; Amphi; Iso,60224512,Lake,Diadromous,"LF, SF, INA, TF",3 to 4,brackish,~6
+WAI-TF,R26,Forsterygion nigripenne,5,Triplefin pooled gill tissue RNA,Not threatened,Lake Waikauia,-43.71709556,-176.6221426,"tidal, brackish",~6,,LF; SF; INA; TF; Shrimp; Amphi; Iso,61443319,Lake,Diadromous,,3 to 4,brackish,~6

@@ -1,0 +1,358 @@
+---
+title: "Rekohu"
+author: "R. M. Grimwood"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+## Load Libraries
+```{r Library Imports, message=FALSE, warning=FALSE}
+
+library(dichromat)
+library(ggord)
+library(ggplot2)
+library(RColorBrewer)
+library(reshape2)
+library(tidyverse)
+library(vegan)
+library(viridis)
+library(zoo)
+
+```
+
+
+## Import Data
+```{r Import Data}
+
+# Metadata
+metadata = read.table('Rekohu_metadata.csv', sep=',', header=TRUE)
+rownames(metadata) = metadata[,1]
+metadata = metadata[,-1]
+
+# Site data
+sitedata = read.table('Rekohu_site_and_meta_data.csv', sep=',', header=TRUE)
+rownames(sitedata) = sitedata[,1]
+sitedata = sitedata[,-1]
+
+# Load abundances - full, by location, by species, separate smelt, RPS13
+
+# Viral standardised abundances
+abundances = read.table('Rekohu_Viral_Family_Abundances_Standardised_v2.csv', sep=',', header=TRUE)
+rownames(abundances) = abundances[,1]
+abundances = abundances[,-1]
+colnames(abundances) = rownames(metadata)
+
+# Viral abundances - only smelt
+abundances_smelt = select(abundances, ends_with('-S'))
+
+# RPS13 abundances
+RPS13 = read.table('rekohu_RPS13.csv', sep=',', header=TRUE)
+rownames(RPS13) = RPS13[,1]
+RPS13 = RPS13[,-1]
+tRPS13 = t(RPS13)
+
+```
+
+
+## Sequencing Read Depth
+```{r Sequencing Reads}
+
+# Plot sequencing depth of each library
+barplot(metadata$Library.reads, names.arg = rownames(metadata), ylab = "Reads")
+
+```
+
+
+## Viral Abundance
+```{r Viral Abundance}
+
+# Transpose abundances
+tabun = t(abundances)
+
+
+# Table of vertebrate viruses, total virome, and RPS13 abundances
+abun_for_plot = colSums(abundances[1:13,])
+abun_for_plot = as.matrix(abun_for_plot)
+abun_for_plot = cbind(abun_for_plot, tabun[,14], RPS13$Standardised.rps)
+colnames(abun_for_plot) = c("Vert.viruses", "Total.virome", "RPS13")
+
+melted_abun_for_plot = melt(abun_for_plot)
+
+ggplot(data=melted_abun_for_plot, aes(x=Var1, y=value, fill=Var2)) +
+    geom_bar(stat="identity", position=position_dodge()) + coord_flip() + theme_light() + scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + scale_fill_manual(values = c("grey", "black", "dodgerblue3"))
+
+
+# Normalised total virome abundances (includes non-vert)
+non_vert = tabun[,14] - rowSums(tabun[,-14]) # subtract total vert from total virome = non-vert
+norm_abun = tabun[,-14]
+norm_abun = cbind(norm_abun, non_vert)
+norm_abun = sweep(norm_abun,1,rowSums(norm_abun),"/") # normalise by library
+
+melted_norm_abun = melt(norm_abun)
+
+ggplot(data=melted_norm_abun, aes(x=Var1, y=value, fill=Var2)) +
+  geom_bar(stat="identity") + coord_flip() + theme_light()
+
+
+
+# Normalised vertebrate viruses (excludes non-vert)
+norm_abun_vert = tabun[,-14]
+norm_abun_vert = sweep(norm_abun_vert,1,rowSums(norm_abun_vert),"/") # normalise by library 
+
+melted_norm_abun_vert = melt(norm_abun_vert)
+
+ggplot(data=melted_norm_abun_vert, aes(x=Var1, y=value, fill=Var2)) +
+  geom_bar(stat="identity") + coord_flip() + theme_light() + scale_fill_manual(values = c("cadetblue2", "dodgerblue3", "coral3", "brown4",  "darkseagreen3", "chartreuse4", "darkolivegreen4", "goldenrod1", "darkorange2", "deeppink4", "darkmagenta", "darkorchid4", "dimgrey"))
+
+
+```
+
+
+## Heapmaps
+```{r Heatmaps}
+
+# Normalise abundances of vertebrate families 
+norm_vert_hm = norm_abun[,-14]
+norm_vert_hm = norm_vert_hm[rowSums(norm_vert_hm[])>0,]
+norm_vert_hm = sweep(norm_vert_hm,2,colSums(norm_vert_hm),"/")
+colSums(norm_vert_hm)
+
+# Cluster columns
+dist.cols = vegdist(t(norm_vert_hm), method = "bray")
+col.clus = hclust(dist.cols, "aver")
+
+# Cluster rows
+dist.rows = vegdist(norm_vert_hm, method = "bray")
+row.clus = hclust(dist.rows, "aver")
+
+# Make colour objects
+# Abundance gradient
+colfunc = colorRampPalette(c("white", "dark red")) # dichromat function # plot(rep(1,10),col=colfunc(10),pch=19,cex=3)
+# Viruses
+colourObj = colorRampPalette(brewer.pal(9, "BuGn"))(13)
+# Librarys/lakes/fish
+colourObj2 = colorRampPalette(brewer.pal(9, "Spectral"))(19)
+
+# Plot heatmap - Add rev(colourObj) to reverse colour palette
+heatmap(as.matrix(norm_vert_hm), col=colfunc(13), Rowv = as.dendrogram(row.clus), Colv = as.dendrogram(col.clus),  margins = c(10, 3), ColSideColors = colourObj, RowSideColors = colourObj2)
+
+
+```
+
+
+## Statistical Analysis
+```{r Statisitcal Analysis}
+
+# Remove rows with vertebrate viruses
+tabun_no_0 = tabun[rowSums(tabun[,-14]) > 0,]
+
+# Select site data for libraries with vert viruses
+sitedata_no_0 = sitedata[rownames(tabun_no_0),]
+
+# Rename Toso and Nagosha for simplicity
+colnames(tabun_no_0)[6] = "Tosoviridae"
+colnames(tabun_no_0)[11] = "Nagoshaviridae" 
+
+# Create nmds_data for vet viruses by attaching site data 
+nmds_data = cbind(tabun_no_0[,-14], sitedata_no_0)
+
+# Separate out smelt data = 15 lakes
+nmds_smelt_data = nmds_data[-c(14:16, 18),]
+
+# Normalised by library/lake
+norm_nmds_smelt_data = sweep(nmds_smelt_data[,1:13],1,rowSums(nmds_smelt_data[,1:13]),"/")
+norm_nmds_smelt_data = cbind(norm_nmds_smelt_data, nmds_smelt_data[,14:32])
+
+# Normalised full data
+norm_nmds_data = sweep(nmds_data[,1:13],1,rowSums(nmds_data[,1:13]),"/")
+norm_nmds_data = cbind(norm_nmds_data, nmds_data[,14:32])
+
+```
+
+
+## Beta Diversity  - virome versus ecological factors (NMDS) (ALL SPECIES)
+```{r Beta Diversity - NMDS - all species}
+
+set.seed(49)
+
+# Set up distance matrix - Bray-Crutis distance
+vdist= vegdist(norm_nmds_data[,1:13], "bray")
+
+# Preform NMDS
+nmds = metaMDS(vdist, distance = "bray", trymax = 250, k = 7)
+stressplot(nmds)
+plot(nmds, type='t', display=c('site', 'species'))
+
+# Extract NMDS with ggplot
+nmds_points = as.data.frame(nmds$points)
+nmds_points = cbind(norm_nmds_data, nmds_points)
+
+# Seawater influence
+
+adonis2(formula = vdist~Seawater.influence.2, data = nmds_points, method = "bray")
+adonis2(formula = vdist~Species+Seawater.influence.2, data = nmds_points, method = "bray")
+ggplot(nmds_points, aes(x=MDS1, y=MDS2, color=Seawater.influence.2)) + geom_point()
+ggplot(nmds_points, aes(x=MDS1, y=MDS2, color=Species)) + geom_point()
+
+
+# Community composition
+
+adonis2(formula = vdist~Other.fish.richness, data = norm_nmds_data, method = "bray")
+ggplot(nmds_points, aes(x=MDS1, y=MDS2, color=Other.fish.richness)) + geom_point()
+
+```
+
+## Beta Diversity  - virome versus ecological factors (NMDS) (SMELT ONLY)
+```{r Beta Diversity - NMDS - smelt}
+
+set.seed(49)
+
+# Set up distance matrix - Bray-Crutis distance
+vdist= vegdist(norm_nmds_smelt_data[,1:13], "bray")
+
+# Preform NMDS
+nmds = metaMDS(vdist, distance = "bray", trymax = 250, k = 6)
+stressplot(nmds)
+plot(nmds, type='t', display=c('site', 'species'))
+
+# Extract NMDS with ggplot
+nmds_points = as.data.frame(nmds$points)
+nmds_points = cbind(norm_nmds_smelt_data, nmds_points)
+
+# Seawater influence
+
+adonis2(formula = vdist~Seawater.influence.2, data = nmds_points, method = "bray")
+smelggplot(nmds_points, aes(x=MDS1, y=MDS2, color=Seawater.influence.2)) + geom_point()
+
+# Life history
+
+adonis2(formula = vdist~Life.History, data = nmds_points, method = "bray")
+Sggplot(nmds_points, aes(x=MDS1, y=MDS2, color=Life.History)) + geom_point()
+
+# Community composition
+
+adonis2(formula = vdist~Other.fish.richness, data = norm_nmds_smelt_data, method = "bray")
+ggplot(nmds_points, aes(x=MDS1, y=MDS2, color=Other.fish.richness)) + geom_point()
+
+# Beta dispersion
+bd = betadisper(vdist, nmds_points$Seawater.influence.2)
+anova(bd)
+
+bd = betadisper(vdist, nmds_points$Other.fish.richness)
+anova(bd)
+
+bd = betadisper(vdist, nmds_points$Life.History)
+anova(bd)
+
+```
+
+
+## Alpha Diversity
+```{r Alpha Diversity}
+
+# Alpha div. data (unnormalised)
+alpha_diversity_data = nmds_smelt_data
+
+# Vertebrate virus (observed) richness in each lake
+species_richness = apply(alpha_diversity_data[1:15,1:13] > 0,1,sum)
+species_richness
+
+# Combine richness and life history
+species_richness_matrix = cbind(as.matrix(species_richness), alpha_diversity_data$Life.History)
+
+# Extract life histories for T-test
+diadromous = species_richness_matrix[species_richness_matrix[, 2] == "Diadromous",]
+landlocked = species_richness_matrix[species_richness_matrix[, 2] == "Landlocked",]
+
+# Combine moribund and harvest as two separate rows/cols
+richness_matrix = t(as.matrix(merge(zoo(diadromous[,1]), zoo(landlocked[,1]))))
+class(richness_matrix) = "numeric" # make sure everything is numeric
+rownames(richness_matrix) = c("Diadromous", "Landlocked")
+
+# Transpose and melt
+trichness = t(richness_matrix)
+melt_richness = melt(trichness)
+colnames(melt_richness) = c("1", "Group", "Species Richness")
+
+# Plot species richness
+ggplot(melt_richness, aes(x=Group, y=`Species Richness`, fill=Group)) + 
+  geom_boxplot() + geom_jitter(color="black", size=1, alpha=0.5, height=0) + ggtitle("Species Richness per Group") + theme_bw()
+
+# T-test: species richness
+# Species richness
+t.test(as.numeric(diadromous[,1]), as.numeric(landlocked[,1]),
+       alternative = c("two.sided", "less", "greater"),
+       mu = 0, paired = FALSE, var.equal = FALSE,
+       conf.level = 0.95)
+
+
+
+
+# Calculate Shannon diversity of vertebrate viruses in each lake
+shannon = apply(alpha_diversity_data[1:15,1:13],1,diversity,index="shannon") 
+shannon
+
+# Combine Shannon indices and life history labels
+shannon_matrix = cbind(as.matrix(shannon), alpha_diversity_data$Life.History)
+
+# Extract life histories for T-test
+diadromous = shannon_matrix[shannon_matrix[, 2] == "Diadromous",]
+landlocked = shannon_matrix[shannon_matrix[, 2] == "Landlocked",]
+
+# Combine moribund and harvest as two separate rows/cols
+shannon_matrix = t(as.matrix(merge(zoo(diadromous[,1]), zoo(landlocked[,1]))))
+class(shannon_matrix) = "numeric" # make sure everything is numeric
+rownames(shannon_matrix) = c("Diadromous", "Landlocked")
+
+# Transpose and melt
+tshannon = t(shannon_matrix)
+melt_shannon = melt(tshannon)
+colnames(melt_shannon) = c("1", "Group", "Shannon Index")
+
+# Plot species richness
+ggplot(melt_shannon, aes(x=Group, y=`Shannon Index`, fill=Group)) + 
+  geom_boxplot() + geom_jitter(color="black", size=1, alpha=0.5, height=0) + ggtitle("Shannon Index per Group") + theme_bw()
+
+# T-test: shannon diversity
+t.test(as.numeric(diadromous[,1]), as.numeric(landlocked[,1]),
+       alternative = c("two.sided", "less", "greater"),
+       mu = 0, paired = FALSE, var.equal = FALSE,
+       conf.level = 0.95)
+
+
+```
+
+## Diversity vs distance
+```{r Diversity and distance}
+
+# Import data
+div_and_dist = read.table('Rekohu_Distance_versus_Diversity.csv', sep=',', header=TRUE)
+rownames(div_and_dist) = div_and_dist[,1]
+div_and_dist = div_and_dist[,-1]
+
+# Plot
+smelt_dist_plot = ggplot(div_and_dist, aes(y = Shannon.Diversity, x=Distance_km)) + geom_point() + geom_smooth(mapping = aes(y = Shannon.Diversity, x = Distance_km), method="lm", formula = y ~ x) + theme_minimal()
+
+smelt_dist_plot
+
+# Correlation test
+cor.test(x = div_and_dist$Distance_km, y = div_and_dist$Shannon.Diversity, method=c("pearson"))
+
+# Plot - Bray-curtis
+smelt_dist_plot = ggplot(div_and_dist, aes(y = Bray.curtis, x=Distance_km)) + geom_point() + geom_smooth(mapping = aes(y = Bray.curtis, x = Distance_km), method="lm", formula = y ~ x) + theme_minimal()
+
+smelt_dist_plot
+
+# Correlation test
+cor.test(x = div_and_dist$Distance_km, y = div_and_dist$Bray.curtis, method=c("pearson"))
+
+```
