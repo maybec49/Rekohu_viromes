@@ -1,5 +1,5 @@
 # Rekohu_viromes
-Supplementary code and data for "Host specificity shapes fish viromes across lakes on an isolated remote island"
+Supplementary code and data for "Host specificity shapes fish viromes across lakes on an isolated remote island" https://doi.org/10.1016/j.virol.2023.109884
 
 <b>Supplementary Table S1</b>
 
