@@ -1,0 +1,310 @@
+---
+title: "Calf Viromes 2024"
+author: "R. M. Grimwood"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Functions
+```{r Functions}
+
+extract_taxonomy = function(taxonomy_string) { # More condensed version - Para (o), bopi (F)
+  # Split the taxonomy string by '|'
+  levels = str_split(taxonomy_string, "\\|")[[1]]
+  
+  # Look for genus, family, or order
+  genus = levels[str_detect(levels, "virus$") & !str_detect(levels, " ")]
+  family = levels[str_detect(levels, "viridae$")]
+  order = levels[str_detect(levels, "virales$")]
+  viricetes = levels[str_detect(levels, "viricetes$")]
+  viricota = levels[str_detect(levels, "viricota$")]
+  riboviria = levels[str_detect(levels, "Riboviria$")]
+  unclassified = levels[str_detect(levels, "Viruses$")]
+  
+  # Return the first match found or the entire taxonomy
+  if (length(genus) > 0) {
+    return(genus[1])
+  } else if (length(family) > 0) {
+    return(family[1])
+  } else if (length(order) > 0) {
+    return(order[1])
+  } else if (length(viricetes) > 0) {
+    return(viricetes[1])
+  } else if (length(viricota) > 0) {
+    return(viricota[1])
+  } else if (length(riboviria) > 0) {
+    return(riboviria[1])
+  } else if (length(unclassified) > 0) {
+    return("Unclassified virus")
+  } else {
+    return(taxonomy_string)
+  }
+}
+
+```
+
+## Import files
+```{r Setup, message=FALSE, warning=FALSE}
+
+# Libraries
+library(DESeq2)
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
+library(reshape2)
+library(tidyverse)
+library(vegan)
+
+# Libraries for networks
+library(ergm)
+library(ggbipart)
+library(ggnet)
+library(intergraph)
+library(igraph)
+library(network)
+library(sna)
+
+# Extract virus families or orders
+extract_virus_info = function(text) { 
+  
+  if (grepl("*viridae", text)) { 
+    return(gsub(".*\\b([A-Za-z]+viridae)\\b.*", "\\1", text, ignore.case = TRUE)) 
+  } else if (grepl("*virales", text)) { 
+    return(gsub(".*\\b([A-Za-z]+virales)\\b.*", "\\1", text, ignore.case = TRUE))
+  } else { 
+    return("Other") 
+  } 
+  
+}
+
+
+# Extract genus, family, or order
+extract_taxonomy = function(taxonomy_string) { # Longer version, export and merge phages/unclassified manually??
+  # Split the taxonomy string by '|'
+  levels = str_split(taxonomy_string, "\\|")[[1]]
+  
+  # Look for genus, family, or order
+  genus = levels[str_detect(levels, "virus$") & !str_detect(levels, " ")]
+  family = levels[str_detect(levels, "viridae$")]
+  order = levels[str_detect(levels, "virales$")]
+  
+  # Return the first match found or the entire taxonomy
+  if (length(genus) > 0) {
+    return(genus[1])
+  } else if (length(family) > 0) {
+    return(family[1])
+  } else if (length(order) > 0) {
+    return(order[1])
+  } else {
+    return(taxonomy_string)
+  }
+}
+
+# Metadata
+metadata = read.csv("Calf_metadata.csv", header = TRUE)
+
+# Cow oral viromes
+oral = read.csv("cow_oral_viruses_filtered.csv", header = TRUE)
+oral_RPM = read.csv("cow_oral_RPM.csv", header = TRUE)
+
+# Cow faecal viromes
+faecal = read.csv("cow_faecal_viruses_filtered.csv", header = TRUE)
+faecal_RPM = read.csv("cow_faecal_RPM.csv", header = TRUE)
+
+```
+
+## Cow oral viromes - barplot
+```{r Oral viromes}
+
+# Viral families in oral viromes - RPM
+oral_families = oral_RPM[,c(12,14:24)]
+oral_families$taxonomy = sapply(oral_families$taxonomy, extract_virus_info)
+oral_families = aggregate(. ~ taxonomy, data = oral_families, FUN = sum)
+order = c("taxonomy", "W64O", "Y17O", "Y25O", "Y70O", "P18O", "Y14O", "Y18O", "Y41O", "Y52O", "W3O", "Y7O")
+oral_families = oral_families[,order]
+oral_families= oral_families[-c(2,5),]
+
+# Stacked barplot - logged RPM
+melted_families = melt(oral_families) 
+
+ggplot(melted_families, aes(x = variable, y = log10(value+1), fill = taxonomy)) + 
+  geom_bar(position="stack", stat="identity") +
+  theme_bw()
+
+```
+
+## Cow faecal viromes - barplot
+```{r Faecal viromes}
+
+# Viral families in faecal viromes
+faecal_families = faecal_RPM[,c(12,14:24)]
+faecal_families$taxonomy = sapply(faecal_families$taxonomy, extract_virus_info)
+faecal_families = aggregate(. ~ taxonomy, data = faecal_families, FUN = sum)
+faecal_families = faecal_families[-8,] # remove Secoviridae
+order = c("taxonomy", "W64", "Y17", "Y25", "Y70", "P18", "Y14", "Y18", "Y41", "Y52F", "W3", "Y7")
+faecal_families = faecal_families[,order]
+
+# Stacked barplot - logged RPM
+faecal_families = faecal_families[-c(4:5,7),]
+melted_families = melt(faecal_families) 
+
+ggplot(melted_families, aes(x = variable, y = log10(value+1), fill = taxonomy)) + 
+  geom_bar(position="stack", stat="identity") +
+  theme_bw()
+
+```
+
+## Co-infections
+```{r Co-infections}
+
+# Data for each cow
+cows = read.csv("Cow_coinfection.csv", header= TRUE, row.names=1)
+network = t(cows) #[1:8,]
+
+network.net = bip_init_network(network)
+network.ig = bip_init_igraph(network)
+
+# RPM-weighted networks
+bip_ggnet(network.net, as.matrix(network), label = TRUE)
+
+# Node colours
+node_colors = c("A" = "gray40", "P" = "lightgreen")  # Example: gray for samples, golden for viruses
+# Plot customization
+set.seed(50)
+bip_ggnet(network.net, as.matrix(network), label = TRUE) +
+  theme_minimal() +
+  scale_color_manual(values = node_colors) +
+  theme(legend.position = "bottom") +
+  labs(title = "Bipartite Network - Coinfections", color = "Node Type") +
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
+
+# Railway network
+bip_railway(network, label=T)
+
+#heatmap(network)
+pheatmap(log2(network + 1), color = brewer.pal(n = 9, name = "BuGn"))
+
+```
+
+## DA on full oral viromes
+```{r DVA - full oral}
+
+# Load oral virus read count data
+oral_full = read.csv("Oral_DVAv2.csv", header=TRUE)
+
+# Format input
+oral_metadata = metadata[1:11, c(2,5)]
+rownames(oral_full) = oral_full[,1]
+oral_full = oral_full[,-1]
+
+# Merge metadata with viral abundances
+data = t(oral_full)
+data = as.data.frame(data)
+data$Calf.VID = rownames(data)
+merged_data = merge(data, oral_metadata, by.x = "Calf.VID", by.y = "Calf.VID")
+
+# Convert data back to matrix with virus counts and create a condition factor
+count_data = merged_data[, -which(names(merged_data) %in% c("Calf.VID", "Condition"))]
+condition = merged_data$Condition
+# Ensure rownames are preserved
+rownames(count_data) = merged_data$Calf.VID
+
+# Normalise data using DESeq2
+dds = DESeqDataSetFromMatrix(countData = t(count_data),
+                              colData = DataFrame(condition = condition),
+                              design = ~ condition)
+
+# Perform differential expression analysis
+dds = DESeq(dds)
+res = results(dds)
+
+# Adjust for multiple comparisons
+res$padj = p.adjust(res$pvalue, method = "BH")
+print(res)
+
+# Volcano plot
+res_df = as.data.frame(res)
+
+ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(aes(color = padj < 0.05)) +
+  theme_bw() +
+  labs(title = "Volcano Plot", x = "Log2 Fold Change", y = "-Log10 Adjusted P-value")
+
+# Heatmap of normalised counts for significant viruses
+significant_viruses = rownames(res_df)[which(res_df$padj < 0.05)]
+normalised_counts = counts(dds, normalized = TRUE)
+significant_counts = normalised_counts[significant_viruses, ]
+
+taxonomy = sapply(rownames(significant_counts), extract_virus_info)
+taxonomy2 = sapply(strsplit(rownames(significant_counts), "\\|"), tail, n = 1)
+rownames(significant_counts)
+significant_taxonomy = significant_counts
+rownames(significant_taxonomy) = taxonomy2
+
+pheatmap(log2(significant_taxonomy + 1), cluster_rows = TRUE, cluster_cols = TRUE, color = brewer.pal(n = 9, name = "Greys"))
+
+```
+
+## DA on full faecal viromes
+```{r DVA - full faecal}
+
+# Load oral virus read count data and aggregate genus counts
+faecal_full = read.csv("Faecal_DVAv2.csv", header= TRUE)
+
+faecal_metadata = metadata[1:11, c(2,5)]
+rownames(faecal_full) = faecal_full[,1]
+faecal_full = faecal_full[,-1]
+
+# Merge metadata with viral abundances
+data = t(faecal_full)
+data = as.data.frame(data)
+data$Calf.VID = rownames(data)
+merged_data = merge(data, faecal_metadata, by.x = "Calf.VID", by.y = "Calf.VID")
+
+# Convert data back to matrix with virus counts and create a condition factor
+count_data = merged_data[, -which(names(merged_data) %in% c("Calf.VID", "Condition"))]
+condition = merged_data$Condition
+# Ensure rownames are preserved
+rownames(count_data) = merged_data$Calf.VID
+
+# Normalise data using DESeq2
+dds = DESeqDataSetFromMatrix(countData = t(count_data),
+                              colData = DataFrame(condition = condition),
+                              design = ~ condition)
+
+# Perform differential expression analysis
+dds = DESeq(dds)
+res = results(dds)
+
+# Adjust for multiple comparisons
+res$padj = p.adjust(res$pvalue, method = "BH")
+print(res)
+
+# Volcano plot
+res_df = as.data.frame(res)
+
+ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(aes(color = padj < 0.05)) +
+  theme_bw() +
+  labs(title = "Volcano Plot", x = "Log2 Fold Change", y = "-Log10 Adjusted P-value")
+
+# Heatmap of normalised counts for significant viruses
+significant_viruses = rownames(res_df)[which(res_df$padj < 0.05)]
+normalised_counts = counts(dds, normalized = TRUE)
+significant_counts = normalised_counts[significant_viruses, ]
+
+taxonomy = sapply(rownames(significant_counts), extract_virus_info)
+taxonomy2 = sapply(strsplit(rownames(significant_counts), "\\|"), tail, n = 1)
+rownames(significant_counts)
+significant_taxonomy = significant_counts
+rownames(significant_taxonomy) = taxonomy2
+
+pheatmap(log2(significant_taxonomy + 1), cluster_rows = TRUE, cluster_cols = TRUE, color = brewer.pal(n = 9, name = "Greys"))
+
+```
